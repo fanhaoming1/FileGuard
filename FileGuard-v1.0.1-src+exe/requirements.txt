@@ -1,0 +1,4 @@
+Flask>=3.0
+watchdog>=4.0
+pywin32>=306
+PyYAML>=6.0

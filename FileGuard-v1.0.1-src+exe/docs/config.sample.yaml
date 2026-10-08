@@ -1,0 +1,312 @@
+# FileGuard 配置文件（YAML 格式）
+# ================================================================
+# 本文件由程序自动维护注释：每次保存都会按内置的默认结构重新渲染全文，
+# 因此注释不会丢失、升级后新增的配置项也会自动出现并带说明。
+#
+#   · 修改后需在程序里点「停止服务 → 启动服务」才会生效；
+#     监控目录、回收站路径、日志目录、端口等属于启动期配置。
+#   · Windows 路径可直接写，无需像 JSON 那样把反斜杠写成两个：
+#       log:
+#         dir: D:\FileGuardLogs
+#   · 值里含「冒号+空格」「井号 #」或首尾空格时，必须整体加引号：
+#       monitor:
+#         paths:
+#           - "D:\My Share"
+#   · 以 # 开头的内容是注释，程序不会读取；删掉注释不影响运行。
+#   · 校验结果会显示在主界面运行日志与 Web 界面的「系统配置」页。
+# ================================================================
+
+# 监控设置：要盯住哪些共享目录、盯到什么程度
+monitor:
+  # 需要监控的共享文件夹（填服务器的本地绝对路径，不是 UNC 路径）
+  # 取值：路径列表，可写多个；支持相对路径（相对于本程序所在目录）
+  # 默认值：[D:\Share]
+  paths:
+    - D:\Share
+  # 是否递归监控子目录
+  # 取值：true / false
+  # 默认值：true
+  recursive: true
+  # 只监控这些扩展名（白名单）
+  # 取值：扩展名列表，支持 * 通配；["*"] 表示全部文件
+  # 默认值：["*"]
+  include_extensions:
+    - "*"
+  # 忽略这些文件名（黑名单，优先级高于白名单），避免把 Office 临时文件当成正式文件
+  # 取值：文件名通配符列表，支持 * 与 ?
+  # 默认值：[~$*, "*.tmp", "*.temp", "*.bak", "*.swp", Thumbs.db, desktop.ini, .~lock.*, "*.crdownload", "*.part", "*.fg_tmp_restore"]
+  exclude_patterns:
+    - ~$*
+    - "*.tmp"
+    - "*.temp"
+    - "*.bak"
+    - "*.swp"
+    - Thumbs.db
+    - desktop.ini
+    - .~lock.*
+    - "*.crdownload"
+    - "*.part"
+    - "*.fg_tmp_restore"
+  # 单个文件超过该大小则只记录日志、不做镜像存档（保护磁盘）
+  # 取值：整数 ≥ 0，单位 MB；0 表示不限制
+  # 默认值：0
+  max_file_size_mb: 0
+  # 服务启动时对监控目录做一次全量初始镜像（建立基线，保证存量文件删除也能还原）
+  # 取值：true / false；目录很大时首次启动会慢几分钟
+  # 默认值：true
+  seed_on_start: true
+  # 是否把本地文件系统变更（创建 / 修改 / 重命名）也写入访问日志
+  # 取值：true / false；关闭后访问日志只保留来自 Windows 安全审计的访问记录
+  # 默认值：true
+  log_changes: true
+# 文件保护：如何在文件被删除时保住数据
+protection:
+  # 是否启用文件保护（关闭后只记录日志，不再接管删除、不再把内容搬进回收站）
+  # 取值：true / false
+  # 默认值：true
+  enabled: true
+  # 存档策略（决定「删除时能不能把文件搬进回收站」）
+  # mirror = 实时镜像存档：文件一创建/修改就存一份，删除时能 100% 搬进回收站（推荐）
+  # event  = 仅捕获删除事件：省磁盘，但创建后瞬间被删的文件无法保证被存档
+  # 取值：mirror / event
+  # 默认值：mirror
+  strategy: mirror
+  # 文件被客户端删除时的处理动作
+  # move_to_bin = 删除照常生效，程序把该文件（最新存档版本）搬进回收站目录下的实体文件，Web 界面可一键恢复（推荐）
+  # restore     = 立即把文件还原回原路径，对使用者表现为「删不掉」（旧版本行为）
+  # record      = 只把内容留在回收站内容库里（blobs），不在回收站目录生成实体文件
+  # 取值：move_to_bin / restore / record
+  # 兼容说明：旧配置项 auto_restore_on_delete 已由本项取代，升级后该项自动失效
+  # 默认值：move_to_bin
+  on_delete_action: move_to_bin
+  # 还原时目标路径已存在同名文件怎么办（例如用户删掉后马上又建了一个新的）
+  # overwrite = 覆盖 | rename = 改名保存 | skip = 跳过不还原
+  # 取值：overwrite / rename / skip
+  # 默认值：rename
+  restore_conflict_policy: rename
+  # restore_conflict_policy=rename 时，给还原出来的文件加的后缀
+  # 取值：任意字符串（允许为空）
+  # 默认值：" (已恢复)"
+  restore_suffix: " (已恢复)"
+  # 文件一创建就先存档（配合 strategy=mirror 使用）
+  # 取值：true / false
+  # 默认值：true
+  archive_on_create: true
+  # 同一路径连续变更后，等多久再存档（避免大文件边写边存产生大量版本）
+  # 取值：0.5 ~ 30 的浮点数，单位秒；值越小越及时、磁盘写入越多
+  # 默认值：1.5
+  debounce_seconds: 1.5
+  # 同一路径 10 分钟内最多自动还原几次（仅 on_delete_action=restore 时有效，防还原-删除死循环）
+  # 取值：整数 ≥ 0；0 表示不限制
+  # 默认值：10
+  max_restore_per_10min: 10
+  # 写入删除日志前，额外等待多久去把「是谁删的 / 客户端 IP」补全（安全审计事件总比文件系统事件晚到 1~3 秒）
+  # 取值：整数 0 ~ 8000，单位毫秒；0 = 不等，立即写日志（本机删除显示「未知」）
+  # 实际生效值会自动抬到「审计轮询间隔 + 1.5 秒」以上，保证审计事件来得及采到
+  # 默认值：2500
+  actor_backfill_ms: 2500
+# 回收站：被删除文件的存放与恢复仓库
+# 目录结构：files/ 下是被删除文件的实体副本（保留原盘符与目录结构，可直接在资源管理器里翻找），
+#           blobs/ 是内容寻址（SHA-256）去重存档，index.db 是版本索引
+recycle_bin:
+  # 回收站数据存放目录（务必放在监控目录之外，且预留足够磁盘空间）
+  # 取值：绝对路径或相对路径（相对于本程序所在目录）
+  # 默认值：D:\FileGuardRecycle
+  path: D:\FileGuardRecycle
+  # 历史版本保留天数，超期自动清理（同时清掉回收站目录里的实体副本）
+  # 取值：整数 ≥ 0，单位天；0 表示永久保留（不按时间清理）
+  # 默认值：30
+  retention_days: 30
+  # 回收站容量上限，超出后从最旧的已删除版本开始清理
+  # 取值：数字 ≥ 0，单位 GB；0 表示不限制容量
+  # 默认值：20
+  max_size_gb: 20
+  # 是否按下面的保留天数 / 容量上限自动清理（建议保持 true，否则磁盘会持续增长）
+  # 取值：true / false
+  # 默认值：true
+  auto_purge: true
+  # 自动清理的周期：每隔多少天清理一次回收站
+  # 清理内容 = 超过 recycle_bin.retention_days 的已删除版本 + 超出 max_size_gb 的旧版本
+  # 取值：整数 ≥ 1，单位「天」（1 = 每天一次，7 = 每周一次）
+  # 说明：服务每次启动后也会先清理一次；需要不等周期立即清理时，
+  #       点 Web 概览页的「立即清理」或 GUI 的「清理回收站」即可
+  # 默认值：1
+  purge_interval_days: 1
+  # 每天在几点执行自动清理（建议放在夜间低峰，减少对共享盘的影响）
+  # 取值：0~23 的整数（小时，24 小时制）；-1 表示不指定时点，按启动时刻起算周期
+  # 默认值：3
+  purge_at_hour: 3
+  # 每个文件最多保留多少个历史版本，超出的最旧版本会被清理
+  # 取值：整数 ≥ 1；不会清理该文件的最新版本
+  # 默认值：5
+  keep_versions_per_file: 5
+  # 在 Web 界面一键恢复成功后，是否删掉回收站目录里的那份实体副本
+  # 取值：true / false；false 表示恢复后回收站里仍保留一份副本
+  # 默认值：true
+  remove_bin_copy_on_restore: true
+# 日志：access_{date}.log 记录访问、delete_{date}.log 记录删除，
+# 均为一行一个 JSON 的 JSONL 格式；{date} 会替换成当天的日期（见 log.date_format）
+log:
+  # 日志目录（与回收站分开放，便于单独备份 / 归档）
+  # 取值：绝对路径或相对路径（相对于本程序所在目录）
+  # 默认值：D:\FileGuardLogs
+  dir: D:\FileGuardLogs
+  # 访问日志文件名模板，{date} 会被替换成当天日期
+  # 例如默认值在 2026-09-30 这天产出 access_20260930.log
+  # 取值：文件名（不含路径）；写死不带 {date} 则退化为单文件 + 按大小轮转
+  # 默认值：access_{date}.log
+  access_file: access_{date}.log
+  # 删除日志文件名模板，{date} 会被替换成当天日期
+  # 例如默认值在 2026-09-30 这天产出 delete_20260930.log
+  # 取值：文件名（不含路径）
+  # 默认值：delete_{date}.log
+  delete_file: delete_{date}.log
+  # {date} 占位符的日期格式（Python strftime 语法）
+  # 默认 %Y%m%d 即 20260930；改成 %Y-%m-%d 则产出 access_2026-09-30.log
+  # 默认值："%Y%m%d"
+  date_format: "%Y%m%d"
+  # 单个（当日）日志文件达到该大小后的处理
+  # 按天模式：在当天内继续分片，如 access_20260930_1.log、_2.log …
+  # 单文件模式：轮转为 access.log.1 ~ .N
+  # 取值：整数 ≥ 1，单位 MB
+  # 默认值：50
+  max_size_mb: 50
+  # 轮转后最多保留多少个分片文件（按天模式为当日分片数，单文件模式为 .1 ~ .N）
+  # 取值：整数 ≥ 0；0 表示不分片（按天模式下当天文件持续追加）
+  # 默认值：5
+  backup_count: 5
+  # 历史日志文件保留天数：超过该天数的 access_/delete_ 日志会被自动清理
+  # 取值：整数 ≥ 0；0 表示永久保留（不自动清理）
+  # 默认值：90
+  retention_days: 90
+  # 日志文件编码
+  # 取值：utf-8 或 gbk（老工具链才需要改成 gbk）
+  # 默认值：utf-8
+  encoding: utf-8
+  # Web 界面查询日志时最多倒序扫描的行数（防止超大日志把内存吃满）
+  # 取值：整数 ≥ 1000
+  # 默认值：200000
+  max_scan_lines: 200000
+# Windows 安全审计：用来回答「是哪个客户端 IP 的哪个账号访问/删除了文件」
+# 首次启动会自动执行 auditpol 配置并向共享目录写入 SACL，需要管理员权限
+audit:
+  # 是否启用安全事件采集（关闭后仍可记录文件系统变更，但无法追溯到具体客户端账号）
+  # 取值：true / false
+  # 默认值：true
+  enabled: true
+  # 服务启动时自动配置 auditpol 审计策略与 SACL（幂等，可重复执行）
+  # 取值：true / false；false 表示需要你手工配好审计策略
+  # 默认值：true
+  auto_configure: true
+  # 要开启的审计子类别
+  # share  = 详细的文件共享（事件 5145，自带客户端 IP、账号、共享名）
+  # delete = 文件系统（事件 4663，用于删除归因）
+  # 取值：列表，元素只能取 share / delete；数组越短日志量越小
+  # 默认值：[share, delete]
+  scopes:
+    - share
+    - delete
+  # 写入 SACL 的访问权限掩码，掩码越小产生的日志越少（重要：不要加读权限）
+  # 可选值：DELETE、FILE_DELETE_CHILD、FILE_WRITE_DATA、FILE_APPEND_DATA、FILE_READ_DATA、WRITE_DAC、WRITE_OWNER、FILE_WRITE_EA、FILE_WRITE_ATTRIBUTES
+  # 默认值：[DELETE, FILE_DELETE_CHILD]
+  object_mask:
+    - DELETE
+    - FILE_DELETE_CHILD
+  # SACL 审计项针对哪个主体（账号 / 组）生效
+  # 取值：Windows 账户名，Everyone 表示所有访问者
+  # 默认值：Everyone
+  principal: Everyone
+  # 读取安全事件日志的轮询间隔
+  # 取值：整数 ≥ 1，单位秒；值越小越实时、CPU 占用略高
+  # 默认值：2
+  poll_interval_seconds: 2
+  # 每次轮询向前回看的重叠秒数，用于防止事件在两次轮询之间被漏读
+  # 取值：整数 ≥ 0，单位秒；建议不小于 poll_interval_seconds
+  # 默认值：15
+  overlap_seconds: 15
+  # 单次轮询最多处理多少条安全事件
+  # 取值：整数 ≥ 1；繁忙服务器可调大
+  # 默认值：500
+  batch_size: 500
+  # 访问记录去重窗口：同一路径（忽略大小写）+ 同一操作 + 同一账号 + 同一 IP 在此秒数内只记一条
+  # 为什么需要：SMB 对「一次打开」会连发多条 5145（大小写探测、属性查询、真正读取），不去重会一条读取记成 3~7 条
+  # 取值：整数 0 ~ 60，单位秒；0 = 不去重（原始事件全记）
+  # 默认值：2
+  dedup_seconds: 2
+  # 是否忽略来自 127.0.0.1 / ::1 的共享访问（回环）
+  # false = 记录下来（标注为本机回环访问）；true = 丢弃
+  # 注意：在本机用 \\127.0.0.1\共享 或 \\localhost\共享 自测时，只有 false 才能看到记录
+  # 默认值：false
+  skip_loopback: false
+  # 【可选｜重量级】用「文件系统(4663)」额外审计读取，覆盖 5145 抓不到的读取（本机直接打开、SMB 缓存命中、非网络途径）
+  # 留空（默认）= 关闭，读取记录只来自 5145 共享审计（推荐）
+  # 填扩展名（如 [".xlsx", ".docx", ".pdf"]）= 只把这些扩展名的读取写进 FileGuard 日志，其余读取事件丢弃
+  # ⚠️ 代价：Windows 安全日志会把监控目录下【所有】读取都记下来（不受扩展名限制），繁忙服务器日志量与磁盘占用会显著上升
+  # 建议：配合 monitor.paths 缩小到真正需要审计的目录；不要把整个数据盘加进来
+  # 默认值：[]
+  read_extensions: []
+  # 「文件路径 -> 客户端 IP/账号」映射的缓存分钟数，用于给 4663 删除事件补上来源信息
+  # 取值：整数 ≥ 1，单位分钟
+  # 默认值：30
+  ip_cache_minutes: 30
+  # 当事件里查不到客户端 IP 时，是否反查服务器的 SMB 会话表（按账号找出该客户端 IP）
+  # 取值：true / false；关闭后只依赖 5145 事件与缓存，个别记录无 IP
+  # 默认值：true
+  session_lookup: true
+  # SMB 会话表的缓存秒数（会话表查询要走一次 RPC，不宜频繁调用）
+  # 取值：整数 5 ~ 600，单位秒
+  # 默认值：30
+  session_cache_seconds: 30
+# Web 管理界面：查看访问 / 删除记录、一键恢复文件、在线编辑本配置
+web:
+  # 是否启用 Web 管理界面
+  # 取值：true / false
+  # 默认值：true
+  enabled: true
+  # Web 服务监听地址
+  # 取值：0.0.0.0 = 允许局域网内其它机器访问；127.0.0.1 = 仅本机可访问
+  # 默认值：0.0.0.0
+  host: 0.0.0.0
+  # Web 服务端口
+  # 取值：1 ~ 65535 的整数；被占用时会启动失败并提示
+  # 默认值：8765
+  port: 8765
+  # 服务启动后是否自动用浏览器打开管理界面
+  # 取值：true / false
+  # 默认值：false
+  open_browser_on_start: false
+  # Web 界面登录账号
+  # 取值：任意字符串
+  # 默认值：admin
+  username: admin
+  # Web 界面登录密码；留空时程序首次运行会自动生成随机强密码并写回本文件
+  # 取值：任意字符串（建议不少于 8 位）
+  # 默认值：为空，程序自动生成
+  password: o3uZ6KXetkbd
+  # 是否强制登录校验
+  # 取值：true / false
+  # false 表示任何能访问该端口的人都能看记录、执行恢复，仅建议在完全可信的内网、且已用防火墙或反向代理限制来源时关闭
+  # 默认值：true
+  require_login: true
+  # Web 列表每页显示条数
+  # 取值：整数 10 ~ 500
+  # 默认值：50
+  page_size: 50
+  # 登录会话签名密钥；留空时程序首次运行自动生成（改了会导致已登录用户掉线）
+  # 取值：随机字符串，一般不需要手工填写
+  # 默认值：为空，程序自动生成
+  session_secret: 4af0066fab876286be5f77e4e0fbe00d
+# 程序自身设置
+app:
+  # 程序自身运行日志级别（写入程序日志，非 access/delete 日志）
+  # 取值：DEBUG / INFO / WARNING / ERROR
+  # 默认值：INFO
+  log_level: INFO
+  # 是否只允许同时运行一个 FileGuard 实例（防止重复监控同一目录）
+  # 取值：true / false
+  # 默认值：true
+  single_instance: true
+  # 主界面运行日志区最多显示多少行
+  # 取值：整数 ≥ 50
+  # 默认值：500
+  max_gui_log_lines: 500

@@ -1,0 +1,129 @@
+{
+  "ok": true,
+  "passed": 24,
+  "total": 24,
+  "checks": [
+    {
+      "name": "YAML 配置文件加载",
+      "ok": true,
+      "extra": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\fg_selftest\\config.yaml"
+    },
+    {
+      "name": "保存时自动生成注释",
+      "ok": true,
+      "extra": "312 行"
+    },
+    {
+      "name": "注释可解析回环",
+      "ok": true,
+      "extra": "port=54911"
+    },
+    {
+      "name": "系统托盘图标可挂载",
+      "ok": true,
+      "extra": "icon=C:\\Users\\Administrator\\WorkBuddy\\FileGuard\\assets\\fileguard.ico"
+    },
+    {
+      "name": "删除动作默认为移入回收站",
+      "ok": true,
+      "extra": "move_to_bin"
+    },
+    {
+      "name": "服务启动",
+      "ok": true,
+      "extra": "服务已启动"
+    },
+    {
+      "name": "Web 服务监听",
+      "ok": true,
+      "extra": "port=54911"
+    },
+    {
+      "name": "镜像存档",
+      "ok": true,
+      "extra": "2"
+    },
+    {
+      "name": "删除后原文件消失（删除正常生效）",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "文件已移入回收站实体目录",
+      "ok": true,
+      "extra": "C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\fg_selftest\\Recycle\\files\\C\\Users\\ADMINI~1\\AppData\\Local\\Temp\\fg_selftest\\Share\\selftest.txt"
+    },
+    {
+      "name": "回收站副本内容正确",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "删除日志按天命名 delete_20260930.log",
+      "ok": true,
+      "extra": "delete_20260930.log"
+    },
+    {
+      "name": "删除日志写入",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "删除日志标记 action=move_to_bin",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "删除日志带回收站副本路径",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "访问日志按天命名 access_20260930.log",
+      "ok": true,
+      "extra": "access_20260930.log"
+    },
+    {
+      "name": "访问日志写入",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "Web API /api/ping",
+      "ok": true,
+      "extra": "200"
+    },
+    {
+      "name": "Web API /api/status",
+      "ok": true,
+      "extra": "200"
+    },
+    {
+      "name": "Web API 删除日志查询",
+      "ok": true,
+      "extra": "200"
+    },
+    {
+      "name": "Web API 回收站查询",
+      "ok": true,
+      "extra": "200"
+    },
+    {
+      "name": "Web API 一键恢复",
+      "ok": true,
+      "extra": "200"
+    },
+    {
+      "name": "Web 界面页面可访问",
+      "ok": true,
+      "extra": "41328"
+    },
+    {
+      "name": "服务已停止且端口释放",
+      "ok": true,
+      "extra": ""
+    }
+  ],
+  "exe": "源码模式",
+  "frozen": false
+}

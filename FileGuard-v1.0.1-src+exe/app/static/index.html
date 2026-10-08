@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="sjHONt3u3eUmqEWW8IFXme">
+<head data-page-node-id="QmbBlB1z0rG4J7FQE6MzFJ">
+<meta charset="utf-8" data-page-node-id="LhrMStyQ8DfRDvEp16MppS">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="yD2mFp1Ew4kjIELyDnrYa3">
+<title>FileGuard · 文件访问监控与删除保护</title>
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --panel-2:#fafbfd; --line:#e4e8f0; --line-2:#eef1f7;
+  --text:#1e2a3a; --muted:#6b7a90; --primary:#2563eb; --primary-d:#1d4ed8;
+  --ok:#15803d; --ok-bg:#e8f6ec; --warn:#b45309; --warn-bg:#fdf4e3;
+  --danger:#b91c1c; --danger-bg:#fdecec; --info-bg:#eaf0fe; --info:#1e40af;
+  --radius:10px; --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.6 "Microsoft YaHei","PingFang SC","Segoe UI",Roboto,system-ui,sans-serif}
+a{color:var(--primary);text-decoration:none}
+button{font-family:inherit;font-size:13px;cursor:pointer;border-radius:8px;border:1px solid var(--line);
+  background:#fff;color:var(--text);padding:7px 14px;transition:.15s}
+button:hover{border-color:#c9d3e4;background:#f8fafc}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+button.primary:hover{background:var(--primary-d);border-color:var(--primary-d)}
+button.danger{background:#fff;border-color:#f0c4c4;color:var(--danger)}
+button.danger:hover{background:var(--danger-bg)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#cdd6e3;border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* layout */
+#app{display:flex;min-height:100vh}
+.side{width:212px;flex:0 0 212px;background:#0f1b2d;color:#c9d5e6;padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px 16px}
+.brand .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#2563eb,#22d3ee);
+  display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px}
+.brand b{color:#fff;font-size:15px;letter-spacing:.4px}
+.brand small{display:block;color:#7d8ea6;font-size:11px;font-weight:400;letter-spacing:0}
+.nav{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;cursor:pointer;font-size:13.5px;color:#c9d5e6}
+.nav:hover{background:#19273c;color:#fff}
+.nav.on{background:#1d4ed8;color:#fff;font-weight:600}
+.nav .ico{width:16px;text-align:center;font-size:14px}
+.side .foot{margin-top:auto;padding:10px 11px;font-size:11px;color:#6b7d96;line-height:1.7;border-top:1px solid #1e2c42}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{height:58px;flex:0 0 58px;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;padding:0 20px;position:sticky;top:0;z-index:20}
+.top h1{font-size:16px;margin:0;font-weight:600;flex:1}
+.autoref{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);
+  padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;
+  user-select:none}
+.autoref input{margin:0;cursor:pointer}
+.autoref.off{opacity:.55}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.badge.on{background:var(--ok-bg);color:var(--ok)}
+.badge.off{background:#eef1f6;color:var(--muted)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.dot.pulse{animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(21,128,61,.5)}70%{box-shadow:0 0 0 7px rgba(21,128,61,0)}100%{box-shadow:0 0 0 0 rgba(21,128,61,0)}}
+.content{padding:20px;display:flex;flex-direction:column;gap:16px;flex:1}
+.page{display:none;flex-direction:column;gap:16px}
+.page.on{display:flex}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card>.hd{padding:13px 16px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card>.hd h2{margin:0;font-size:14px;font-weight:600;flex:1}
+.card>.bd{padding:16px}
+.card>.bd.tight{padding:0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat .k{font-size:12px;color:var(--muted);margin-bottom:6px}
+.stat .v{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.stat .s{font-size:11.5px;color:var(--muted);margin-top:3px;word-break:break-all}
+.stat.ok .v{color:var(--ok)} .stat.warn .v{color:var(--warn)} .stat.danger .v{color:var(--danger)}
+.stat.blue .v{color:var(--primary)}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line-2);vertical-align:top}
+th{background:var(--panel-2);font-weight:600;color:#425068;white-space:nowrap;position:sticky;top:0;z-index:2;
+  font-size:12.5px}
+tbody tr:hover{background:#f8fafd}
+td.mono{font-family:Consolas,"Courier New",monospace;font-size:12px}
+.path{max-width:420px;word-break:break-all;font-family:Consolas,"Courier New",monospace;font-size:12px;color:#334155}
+.pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pill.read{background:var(--info-bg);color:var(--info)}
+.pill.write{background:var(--warn-bg);color:var(--warn)}
+.pill.del{background:var(--danger-bg);color:var(--danger)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.gray{background:#eef1f6;color:var(--muted)}
+.empty{padding:44px;text-align:center;color:var(--muted);font-size:13px}
+.scroll{max-height:calc(100vh - 320px);overflow:auto}
+
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filters input[type=text]{min-width:200px}
+.bar{display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--line-2);flex-wrap:wrap}
+.bar .info{color:var(--muted);font-size:12.5px;flex:1}
+.pager{display:flex;gap:6px;align-items:center}
+.pager button{padding:5px 10px}
+.chk{width:15px;height:15px;vertical-align:middle;cursor:pointer;accent-color:var(--primary)}
+
+.toast{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast .t{background:#1f2b3d;color:#fff;padding:10px 15px;border-radius:9px;font-size:13px;
+  box-shadow:0 6px 20px rgba(15,27,45,.25);opacity:0;transform:translateY(8px);transition:.25s;max-width:380px}
+.toast .t.on{opacity:1;transform:none}
+.toast .t.ok{background:#14532d} .toast .t.err{background:#7f1d1d} .toast .t.warn{background:#78350f}
+
+.mask{position:fixed;inset:0;background:rgba(15,27,45,.55);display:none;align-items:center;justify-content:center;z-index:9998}
+.mask.on{display:flex}
+.dialog{background:#fff;border-radius:12px;padding:24px;width:min(420px,92vw);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.dialog h3{margin:0 0 10px;font-size:16px}
+.dialog p{color:var(--muted);font-size:13px;margin:0 0 18px}
+.dialog .row{display:flex;gap:8px;justify-content:flex-end}
+.login .dialog{width:min(360px,92vw)}
+.login .dialog input{width:100%;margin-bottom:10px}
+
+.ev{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line-2);font-size:13px}
+.ev:last-child{border:none}
+.ev .tm{color:var(--muted);font-family:Consolas,monospace;font-size:12px;flex:0 0 62px}
+.ev.warn .tx{color:var(--warn)} .ev.error .tx{color:var(--danger)} .ev.ok .tx{color:var(--ok)}
+textarea{width:100%;min-height:440px;font-family:Consolas,"Courier New",monospace;font-size:12.5px;
+  border:1px solid var(--line);border-radius:9px;padding:12px;line-height:1.6;resize:vertical;outline:none;
+  background:#fcfdff;color:var(--text)}
+textarea:focus{border-color:var(--primary)}
+.hint{font-size:12.5px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:132px 1fr;gap:7px 14px;font-size:13px}
+.kv .k{color:var(--muted)}
+.kv .v{word-break:break-all;font-family:Consolas,"Courier New",monospace;font-size:12.5px}
+.alert{padding:11px 14px;border-radius:9px;font-size:13px;margin-bottom:12px}
+.alert.err{background:var(--danger-bg);color:var(--danger);border:1px solid #f5c9c9}
+.alert.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #f0dcb4}
+.alert.ok{background:var(--ok-bg);color:var(--ok);border:1px solid #bfe3c8}
+@media (max-width:820px){
+  .side{width:60px;flex:0 0 60px;padding:14px 8px}
+  .brand b,.brand small,.nav span.lbl{display:none}
+  .brand{justify-content:center;padding-bottom:12px}
+  .nav{justify-content:center}
+}
+</style>
+</head>
+<body data-page-node-id="9x8pitAcR91BHrazl6XaIY">
+
+<div id="app" data-page-node-id="79CAtjD0y9CioR8HQsSP2C">
+  <aside class="side" data-page-node-id="hXop6TmmdbDxcHVtIK2rTR">
+    <div class="brand" data-page-node-id="GEcAh4Kf4Fh51XQb05Z4bD">
+      <div class="logo" data-page-node-id="wSNJGtkAx2Q5tV7cFT5BfQ">FG</div>
+      <div data-page-node-id="iSAtR9YMOr6XXAAtU8Dzdx"><b data-page-node-id="QRRU5JJBZSemQJd6H0dSh2">FileGuard</b><small data-page-node-id="ayo7JrsFsX44rwbx3YsI9w">访问监控 · 删除保护</small></div>
+    </div>
+    <div class="nav on" data-page="dash" data-page-node-id="b5dpF8b3S1rLghp1zAzU1e"><span class="ico" data-page-node-id="NVV1zXqqwwJgzVWDhWR8xC">▦</span><span class="lbl" data-page-node-id="22uA5QlDpTyiSHxRd5yvHA">概览</span></div>
+    <div class="nav" data-page="access" data-page-node-id="ki1j8IbNQGBS44sXnAFOCk"><span class="ico" data-page-node-id="GId3JfZGzGN5mMbk9SSu3p">◎</span><span class="lbl" data-page-node-id="al8bloLFHOE2ZaKkS4vRwi">访问记录</span></div>
+    <div class="nav" data-page="del" data-page-node-id="VTNUnfh2BB0p6Rtv2A5SA0"><span class="ico" data-page-node-id="TdJnLxvFPJEICGeaOlTvKW">⌫</span><span class="lbl" data-page-node-id="2sd9qDzFPBp0OtHRU4LtHK">删除记录</span></div>
+    <div class="nav" data-page="bin" data-page-node-id="ElVatyJIJf12p7DIhYGf52"><span class="ico" data-page-node-id="IeuyVXFa2ZqrrMZfqTCZq7">♻</span><span class="lbl" data-page-node-id="3jQgiWhVLICzhy0uzuJwF2">回收站</span></div>
+    <div class="nav" data-page="conf" data-page-node-id="cFgCaykhSsIXDPWaZYWZPC"><span class="ico" data-page-node-id="g95zcZXEVrrmmOHKkcg8gH">⚙</span><span class="lbl" data-page-node-id="NSRinWgA4psFEOwCHoY16Y">系统配置</span></div>
+    <div class="foot" data-page-node-id="htIFWQVYgCIrecqBwbRgd4">
+      <div id="sideVer" data-page-node-id="WyAL2JpndAmkqDUtJndAJR">v1.0.0</div>
+      <div id="sideOut" data-page-node-id="5hbJRNZv4tEWPNhpvQltUn"><a href="#" onclick="doLogout();return false" style="color:#8fa6c4" data-page-node-id="LqOnfibrdoWnMuroKLjzVQ">退出登录</a></div>
+    </div>
+  </aside>
+
+  <div class="main" data-page-node-id="73jZrONQAtoMQDuYRd94jt">
+    <header class="top" data-page-node-id="qPMKP2aLjqxvx8RMuy6En3">
+      <h1 id="pageTitle" data-page-node-id="Lt4zZjtUjQ8ckr2bGGF8XJ">概览</h1>
+      <span class="badge off" id="svcBadge" data-page-node-id="U8V7oH4p1kEoE8CJmXKFzC"><span class="dot" data-page-node-id="MjRzSFjvkUFTwyxDY84Z31"></span>检测中</span>
+      <button id="btnToggle" class="primary" data-page-node-id="vpRO8UP8YLpmIc8aLWWjhJ">启动服务</button>
+      <label class="autoref" title="每 5 秒自动刷新当前页面的数据（勾选状态会记住）" data-page-node-id="PiKivIZtr7Ch5U7btl642v">
+        <input type="checkbox" id="autoRef" checked onchange="setAuto(this.checked)" data-page-node-id="dlKG9YU5Dh79ptKsIAEMnj">
+        <span id="autoLabel" data-page-node-id="vwOrODSvZkAM8DENYazTpS">自动刷新 5s</span></label>
+      <span class="hint" id="lastRef" data-page-node-id="0NHXLxghLVBVgCGDocu8oH"></span>
+      <button onclick="refreshAll()" data-page-node-id="Y00v6iuwTMAlOIUkT96ISn">刷新</button>
+    </header>
+
+    <div class="content" data-page-node-id="z9OQDSCHxEPggt8Wyw1ppH">
+
+      <!-- 概览 -->
+      <section class="page on" id="page-dash" data-page-node-id="NP8CcZzCOfxrYDo46exXjD">
+        <div id="cfgAlert" data-page-node-id="yBObZHwAwXQnf9QOXYu39H"></div>
+        <div class="stats" id="statCards" data-page-node-id="RqopdUePFM4Neqyt8eBNru"></div>
+        <div class="card" data-page-node-id="tEgfuEfvTIyomQP5pThksH">
+          <div class="hd" data-page-node-id="uyK5yP4F0iDsJJbHPRHuwQ"><h2 data-page-node-id="v2ouulUG7ogkLqGgL7NHLS">运行信息</h2></div>
+          <div class="bd" data-page-node-id="2daADyBtQ6FSyStEskeTbA"><div class="kv" id="runInfo" data-page-node-id="fFB61y7nEXnCkoTOCsTTSK"></div></div>
+        </div>
+        <div class="card" data-page-node-id="kCeNULnfltfmX8V3QAsdHU">
+          <div class="hd" data-page-node-id="ks6qIZEhzTZiLXWmdqLsRI"><h2 data-page-node-id="Z7Brxj5hv7JCWu8JxQXRql">实时事件</h2><span class="hint" id="evHint" data-page-node-id="0IwE99zIcd8syqhvsVj2qB"></span></div>
+          <div class="bd" id="evList" style="max-height:300px;overflow:auto" data-page-node-id="hx8swaBNXcHptIdhiECGeb"></div>
+        </div>
+      </section>
+
+      <!-- 访问记录 -->
+      <section class="page" id="page-access" data-page-node-id="GMECRZPGcBo7KiPwtP9sDH">
+        <div class="card" data-page-node-id="mGQSD9Q5TAT9fiNioFVB6U">
+          <div class="hd" data-page-node-id="hCyWHY7tlB8x644qYFUCOY">
+            <h2 data-page-node-id="mJvz0aH0lg1iSdTqD2USCD">访问记录 · <span class="mono" id="accLogName" data-page-node-id="burelhc1QKbXJZrc6FA5ce">access_yyyymmdd.log</span></h2>
+            <div class="filters" data-page-node-id="LhDu4w9XgGDhMZlIhCpBFk">
+              <input type="text" id="aQ" placeholder="路径 / 用户 / IP 关键词" data-page-node-id="MQe72rTPsO9FqB87ghA9KN">
+              <input type="text" id="aUser" placeholder="用户" style="width:120px" data-page-node-id="Zuzx5DXUBwA853uFDAZHWU">
+              <select id="aOp" data-page-node-id="IVRt3uHNuyirPmuvqkQP95"><option value="" data-page-node-id="AFwEPL23QtmyvhpGCMDMdp">全部操作</option><option data-page-node-id="GhmJBQLlEsjE9Aa9vwNrXH">读取</option><option data-page-node-id="SfoulHeX9UfkPVDbuTGVVA">写入</option>
+                <option data-page-node-id="4lEiPKp2QAzChHQHdCrMZw">创建</option><option data-page-node-id="zYPiMcIOvs6pIFfYR9b75T">修改</option><option data-page-node-id="9Ag2wJUIPOEFAwtcKRWzJa">重命名</option><option data-page-node-id="JJan00EnoHmrWFm08Q1FEF">删除</option><option data-page-node-id="qjIz6TZdtBXoUD4v6W0Dcu">访问</option></select>
+              <button class="primary" onclick="loadAccess(1)" data-page-node-id="nLm4cqIw5asdA44KxFqVLp">查询</button>
+              <button onclick="resetAccess()" data-page-node-id="xKcOk2cgAmWeFFv80Uai4k">重置</button>
+              <button onclick="exportCsv('access')" data-page-node-id="lmXEvkI6tgofhj9qjZRUCC">导出 CSV</button>
+            </div>
+          </div>
+          <div class="bd tight" data-page-node-id="fCHTvbczKytAlH76q3Q1ew"><div class="scroll" id="aTable" data-page-node-id="rm5U1FsI0ABvfZdXxSFThU"></div></div>
+          <div class="bar" data-page-node-id="542ZgRHRNhyblWLF0QapFW">
+            <span class="info" id="aInfo" data-page-node-id="hhhbw6PofijYDWsdGnHcwZ">—</span>
+            <span class="pager" id="aPager" data-page-node-id="5lW1Z0YBGVkPYIYG1sWHQl"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 删除记录 -->
+      <section class="page" id="page-del" data-page-node-id="UsSgqueUObMANLVmV7h7eT">
+        <div class="card" data-page-node-id="AoqyyIGGsVli5wehgh4OjO">
+          <div class="hd" data-page-node-id="Zn9vuduNKQIFtHWzMUtWDU">
+            <h2 data-page-node-id="ERAPPBIr6hCPnAt0bBU8Qf">删除记录 · <span class="mono" id="delLogName" data-page-node-id="A9nIeisfNvD7dL5iqt0cI3">delete_yyyymmdd.log</span></h2>
+            <div class="filters" data-page-node-id="cIcZOZG1Uzs1T8RBtvfcB4">
+              <input type="text" id="dQ" placeholder="路径 / 用户 关键词" data-page-node-id="TOBdk6TDLeyEPCJaDbHF3M">
+              <input type="text" id="dUser" placeholder="用户" style="width:120px" data-page-node-id="dOCJHjPrkvh0UiXqOZZ8mv">
+              <button class="primary" onclick="loadDelete(1)" data-page-node-id="VfrlXLnS5hDtmLG4PRYNaF">查询</button>
+              <button onclick="resetDelete()" data-page-node-id="AQUHcNzgppyoeMRvMdeQHT">重置</button>
+              <button onclick="exportCsv('delete')" data-page-node-id="SWCk50JbNhoiV1PergZaBL">导出 CSV</button>
+            </div>
+          </div>
+          <div class="bd tight" data-page-node-id="qeLTdPFxIS1XtCHxS1gX1M"><div class="scroll" id="dTable" data-page-node-id="h4PYF5Diyp7Ibj5ZC9I79n"></div></div>
+          <div class="bar" data-page-node-id="KmO8FekKTdR77qKNw4BqAc">
+            <span class="info" id="dInfo" data-page-node-id="DjNbi9cAHpi6utbKLgbUYw">—</span>
+            <span class="pager" id="dPager" data-page-node-id="wcN1XQ0tA7wWy58AVAatVx"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 回收站 -->
+      <section class="page" id="page-bin" data-page-node-id="CR3X0ux6v2NY7YODDQCjfm">
+        <div class="stats" id="binStats" data-page-node-id="ixgriCpSaCutspmC0cQShI"></div>
+        <div class="card" data-page-node-id="FqGr7l7aYT4tpqDsjHI51P">
+          <div class="hd" data-page-node-id="vcvuUgKJYXeWeTHixknZLS">
+            <h2 data-page-node-id="zkeducgqTSiWHbLFxGQXAg">回收站</h2>
+            <div class="filters" data-page-node-id="kW7dMGua7G9XgJj0Is31G9">
+              <select id="rState" onchange="loadBin(1)" data-page-node-id="IQMYsBUsrcL08X1utiqTKS">
+                <option value="deleted" data-page-node-id="XzHdSuKt3qYnoubUABGzno">已删除（可恢复）</option>
+                <option value="active" data-page-node-id="hFSTMWKawwYRzJCpAdTTt6">当前有效存档</option>
+                <option value="restored" data-page-node-id="xVBLUk2izzdBrssPvbNZUL">已还原（历史留痕）</option>
+                <option value="" data-page-node-id="VQIePzqdVWsKeaKigzMz84">全部历史版本</option>
+              </select>
+              <input type="text" id="rPath" placeholder="按原路径筛选" data-page-node-id="rxxpkDRH9tT4NGhAQ8BdM5">
+              <button class="primary" onclick="loadBin(1)" data-page-node-id="CIyLJ8KCeKCoXAAGcZsU1t">查询</button>
+              <button class="danger" onclick="emptyBin()" data-page-node-id="giex5X03HX6ss4RxQi1W1Y">清空回收站</button>
+              <button onclick="purgeBin()" data-page-node-id="wALdeS7TvhLgwXrVSVG4JL">立即清理过期</button>
+            </div>
+          </div>
+          <div class="bd tight" data-page-node-id="uaw8F1PGkRQQP0o2H1DhCK"><div class="scroll" id="rTable" data-page-node-id="3xlQjCEAWzoWikYHsHz9CF"></div></div>
+          <div class="bar" data-page-node-id="kbxhSiZuGt5qSDkILf8clR">
+            <span class="info" id="rInfo" data-page-node-id="cl2ORSP6zJqwqFjjR53MmN">—</span>
+            <button id="rRestoreSel" onclick="restoreSelected()" data-page-node-id="GeWX9WbXQlEyyUZkbpMu9K">一键恢复所选</button>
+            <button class="danger" id="rDeleteSel" onclick="deleteSelected()" data-page-node-id="RDRmgQaRjdaADvXEBDabdW">彻底删除所选</button>
+            <span class="pager" id="rPager" data-page-node-id="VhI76edt9hBvv8FEHUDT0L"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 配置 -->
+      <section class="page" id="page-conf" data-page-node-id="CjPn72trNdSIv5XS6hrSYN">
+        <div class="card" data-page-node-id="iwYlAFuHjkPB8YUZZqYkxZ">
+          <div class="hd" data-page-node-id="URQtvp4TGPpS0OOoRDdH24">
+            <h2 data-page-node-id="boH6GYaFNhJpYVLKYPASr0">config.yaml</h2>
+            <span class="hint" id="confPath" data-page-node-id="8Paly8re3lRfkE1dbSHU1c"></span>
+            <button class="primary" onclick="saveConfig()" data-page-node-id="y9LCbUJqX5vQ80Hho6eZGv">保存配置</button>
+            <button onclick="loadConfig()" data-page-node-id="VePGR28PThgqtXcbAFvN9s">重新载入</button>
+            <button onclick="resetConfig()" data-page-node-id="AHBdppN74lP1TCb61ZE6hD">恢复注释排版</button>
+          </div>
+          <div class="bd" data-page-node-id="CC0ZvrBwe5SIhbBVPbsvrr">
+            <div id="confMsg" data-page-node-id="jTb0WxK6FR5uuMzstmMVAQ"></div>
+            <textarea id="confText" spellcheck="false"></textarea>
+            <p class="hint" style="margin-top:10px" data-page-node-id="ZAjoW7iOZn0dNzAweyEi3s">
+              配置文件为 <b data-page-node-id="fVZdMU4mYJCHebLiOhpFNA">YAML 格式</b>，每一项上方的 <code data-page-node-id="rCxymsVMyvVCeKVGTns23W">#</code> 注释说明了用途、取值范围与默认值，
+              可以放心保留或删除（程序不会读取注释）。<br data-page-node-id="ea4DLjE6uPUmFP5rYNTKOP">
+              保存时程序会按内置默认结构重新渲染全文，<b data-page-node-id="sANSbEsAhJRlFFzP5IwB1e">注释会自动补回</b>，
+              升级新增的配置项也会自动出现。<br data-page-node-id="v035fI8sjCOnwvDmstBDzZ">
+              注意：值里含「冒号+空格」「#」时要用英文引号包起来；
+              修改监控目录、回收站路径、日志目录、端口等需点击顶部「停止服务 → 启动服务」后生效；
+              Web 端口变更后请使用新端口重新打开本页面。
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="mask login" id="loginMask" data-page-node-id="aEUdm2NaFDvOXIsNy1ZlOs">
+  <div class="dialog" data-page-node-id="Rg0PZD8FqnPhBVF3oPCzvV">
+    <h3 data-page-node-id="WytjtYmyO9E9sxU952YUY2">FileGuard 登录</h3>
+    <p data-page-node-id="TThFC9MbWV6K2Y9u75jXT2">请输入管理员账号密码（默认账号 admin，密码在软件主界面显示）</p>
+    <input type="text" id="lgUser" value="admin" placeholder="用户名" data-page-node-id="7AUGCoVm7Tk2WJxLzKDnYv">
+    <input type="password" id="lgPwd" placeholder="密码" data-page-node-id="SFzlbOhxY83M2nxSuomotu">
+    <div class="row" data-page-node-id="fhzKgUzOMeHbr0xxyeUP7V">
+      <button class="primary" onclick="doLogin()" data-page-node-id="DiXQJsLEREcCHIWZ5RVDZo">登录</button>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="confirmMask" data-page-node-id="haFCdSudSajs96sWqw6Woo">
+  <div class="dialog" data-page-node-id="H0ecoSfcV8B7AiEmAUV7g5">
+    <h3 id="cfTitle" data-page-node-id="LohwdRXxowweYXJ8XWencn">确认</h3>
+    <p id="cfText" data-page-node-id="CjgDM2OpDrz6wEGuEZfJMR"></p>
+    <div class="row" data-page-node-id="EuqVUttQWtWWeroBN7T1dr">
+      <button onclick="closeConfirm()" data-page-node-id="ruMHKdM6XTAQMcFyWpAzAI">取消</button>
+      <button class="danger" id="cfOk" data-page-node-id="7TevPhbOixA6e7X0KkBVxs">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" data-page-node-id="j4zjrLg9i5intTTkwQRBSs"></div>
+
+<script>
+/* ============ 基础工具 ============ */
+const $ = s => document.querySelector(s);
+const esc = v => String(v === null || v === undefined ? '' : v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+function toast(msg, kind=''){
+  const el = document.createElement('div');
+  el.className = 't ' + kind;
+  el.textContent = msg;
+  $('#toast').appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+  setTimeout(()=>{ el.classList.remove('on'); setTimeout(()=>el.remove(),300); }, 3600);
+}
+
+let needLogin = false;
+async function api(path, opts={}){
+  opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+  const r = await fetch(path, opts);
+  if (r.status === 401){
+    let j = null; try{ j = await r.json(); }catch(e){}
+    if (j && j.need_login){ showLogin(); }
+    throw new Error((j && j.error) || '未登录');
+  }
+  const ct = r.headers.get('content-type') || '';
+  if (ct.indexOf('application/json') < 0) return r;
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || '请求失败');
+  return j;
+}
+
+function showLogin(){ needLogin = true; $('#loginMask').classList.add('on'); }
+async function doLogin(){
+  try{
+    await api('/api/login', {method:'POST', body: JSON.stringify({
+      username: $('#lgUser').value, password: $('#lgPwd').value})});
+    $('#loginMask').classList.remove('on');
+    needLogin = false;
+    toast('登录成功','ok');
+    refreshAll();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function doLogout(){
+  try{ await api('/api/logout',{method:'POST'}); }catch(e){}
+  showLogin();
+}
+$('#lgPwd').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+/* 二次确认 */
+let cfFn = null;
+function confirmDo(title, text, fn, okLabel){
+  $('#cfTitle').textContent = title;
+  $('#cfText').textContent = text;
+  $('#cfOk').textContent = okLabel || '确定';
+  cfFn = fn;
+  $('#confirmMask').classList.add('on');
+}
+function closeConfirm(){ $('#confirmMask').classList.remove('on'); cfFn = null; }
+$('#cfOk').onclick = async ()=>{ const f = cfFn; closeConfirm(); if(f) await f(); };
+
+/* ============ 导航 ============ */
+const TITLES = {dash:'概览', access:'访问记录', del:'删除记录', bin:'回收站', conf:'系统配置'};
+let curPage = 'dash';
+function go(page, skipLoad){
+  if (!TITLES[page]) page = 'dash';
+  curPage = page;
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on', n.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on', p.id==='page-'+page));
+  $('#pageTitle').textContent = TITLES[page] || page;
+  // 深链接：地址栏带 #页面，刷新后停留在同一页，也方便直接分享
+  if (location.hash.slice(1) !== page) history.replaceState(null, '', '#' + page);
+  if (skipLoad) return;
+  if (page==='access') loadAccess(1);
+  else if (page==='del') loadDelete(1);
+  else if (page==='bin') loadBin(1);
+  else if (page==='conf') loadConfig();
+}
+document.querySelectorAll('.nav').forEach(n=> n.onclick = ()=>go(n.dataset.page));
+window.addEventListener('hashchange', ()=>{
+  const p = (location.hash || '').slice(1);
+  if (TITLES[p] && p !== curPage) go(p);
+});
+
+/* ============ 状态 ============ */
+function opPill(op){
+  const m = {'读取':'read','写入':'write','创建':'read','修改':'write','重命名':'write',
+             '删除':'del','删除目录':'del','访问':'gray'};
+  return `<span class="pill ${m[op]||'gray'}">${esc(op||'-')}</span>`;
+}
+function srcText(s){
+  return {'fs_event':'文件系统','share_audit':'共享访问','object_audit':'对象审计'}[s] || (s||'-');
+}
+function fmtTime(ts){
+  if(!ts) return '-';
+  const t = String(ts).replace('T',' ');
+  return esc(t.length>19 ? t.slice(0,19) : t);
+}
+
+/* 客户端 IP / 操作者：来源说明 + 缺失原因提示（鼠标悬停可见）
+   规则：只有本次删除的审计事件（delete_event）或同路径/同账号缓存命中才展示身份信息；
+        上级目录 / 全局最近访问者等兜底推断一律显示为「未知」，不在界面呈现不确定信息。 */
+const IP_SOURCE_TEXT = {share_audit:'5145 共享审计事件自带',
+  share_audit_loopback:'5145 共享审计 · 本机回环访问（127.0.0.1）',
+  object_audit:'4663 对象审计事件（账号取自这一次删除动作本身）',
+  path_cache:'同路径最近访问者缓存', user_cache:'同账号最近访问缓存',
+  recent_cache:'最近一次访问缓存', session:'SMB 会话表反查',
+  session_sole:'SMB 会话表（当时只有这一个会话）'};
+const ATTR_TEXT = {delete_event:'审计确认', exact:'同路径命中', parent_dir:'上级目录命中',
+  user:'账号命中', recent:'全局最近访问者'};
+
+function isSpeculativeAttribution(a){
+  return !a || a==='unknown' || a==='parent_dir' || a==='recent';
+}
+
+function ipTip(r){
+  const a = r.attribution || '';
+  const p = [];
+  if (isSpeculativeAttribution(a)){
+    p.push('身份信息：未直接捕获到本次操作者');
+    p.push('原因：审计事件未命中、审计子类别未开启或操作来自本机。');
+    return p.join('\n');
+  }
+  if (r.ip) p.push('客户端 IP：' + r.ip);
+  if (r.client) p.push('客户端计算机：' + r.client);
+  if (r.ip_source) p.push('IP 来源：' + (IP_SOURCE_TEXT[r.ip_source] || r.ip_source));
+  if (a) p.push('归因方式：' + (ATTR_TEXT[a] || a));
+  if (!r.ip){
+    if (a==='delete_event')
+      p.push('本次删除已确认操作者，但无客户端 IP，说明操作来自服务器本机（控制台 / 远程桌面 / 本机程序）。');
+    else
+      p.push('未捕获到客户端 IP，请检查 audit.scopes 是否包含 share。');
+  }
+  return p.join('\n');
+}
+function ipCell(r){
+  if (isSpeculativeAttribution(r.attribution))
+    return '<span class="hint" title="未直接捕获到本次操作者">未知</span>';
+  if (r.ip) return `<span class="mono" title="${esc(ipTip(r))}">${esc(r.ip)}</span>`;
+  if (r.attribution==='delete_event')
+    return `<span class="hint" title="${esc(ipTip(r))}">本机操作</span>`;
+  return `<span class="hint" title="${esc(ipTip(r))}">未知</span>`;
+}
+function actorCell(r){
+  const a = r.attribution;
+  if (isSpeculativeAttribution(a))
+    return '<span class="hint" title="未直接捕获到本次操作者">未知</span>';
+  const who = esc(r.user || '未知');
+  if (a==='delete_event')
+    return who + ' <span class="pill ok">审计</span>';
+  return who;
+}
+
+/* 日志概览行：当天文件名 + 体积 + 按天分片的文件数 */
+function logLine(l, fallback){
+  l = l || {};
+  const name = l.name || fallback;
+  if (!l.exists) return name + ' · 尚未生成';
+  const extra = (l.file_count||1) > 1
+    ? `（按日期分文件共 ${l.file_count} 个，最早 ${l.oldest||'-'}）` : '';
+  return name + ' · ' + (l.size_text||'-') + (l.today_exists===false ? ' · 今日暂无新记录' : '')
+    + extra;
+}
+
+/* 回收站自动清理周期：每 N 天 H 点一次 + 下次执行时间 */
+function purgeLine(p){
+  p = p || {};
+  if (p.enabled === false) return '已关闭（recycle_bin.auto_purge = false）';
+  let s = p.schedule_text || '';
+  if (p.next_run) s += `　·　下次 ${p.next_run}`;
+  else if (!p.active) s += '（服务停止中，启动后生效）';
+  const last = p.last || {};
+  if (last.ts) s += `　·　上次 ${last.ts} 清理 ${last.removed||0} 个`;
+  return s;
+}
+
+let lastStatus = null;
+async function loadStatus(){
+  try{
+    const j = await api('/api/status');
+    lastStatus = j.data;
+    renderStatus(j.data);
+  }catch(e){
+    const b = $('#svcBadge');
+    b.className='badge off'; b.innerHTML='<span class="dot"></span>未连接';
+  }
+}
+function renderStatus(s){
+  const b = $('#svcBadge');
+  if (s.running){ b.className='badge on'; b.innerHTML='<span class="dot pulse"></span>运行中'; }
+  else { b.className='badge off'; b.innerHTML='<span class="dot"></span>已停止'; }
+  const t = $('#btnToggle');
+  t.textContent = s.running ? '停止服务' : '启动服务';
+  t.className = s.running ? 'danger' : 'primary';
+
+  const rc = s.recycle || {versions:0,deleted:0,restored:0,size_text:'-'};
+  const pr = s.protector || {};
+  const pg = s.purge || {};
+  const lg = s.logs || {access:{},delete:{}};
+  // 日志文件名按天变化（access_yyyymmdd.log），两处标题同步显示当天实际文件
+  const an = $('#accLogName'), dn = $('#delLogName');
+  if (an) an.textContent = (lg.access||{}).name || 'access_yyyymmdd.log';
+  if (dn) dn.textContent = (lg.delete||{}).name || 'delete_yyyymmdd.log';
+  const cards = [
+    ['运行状态', s.running?'运行中':'已停止', s.started_at?('启动于 '+s.started_at):'点击右上角启动服务',
+      s.running?'ok':''],
+    ['监控目录', (s.monitor_paths||[]).length, (s.monitor_paths||[]).join('  |  '), 'blue'],
+    ['归档版本', rc.versions, '覆盖 '+(rc.paths||0)+' 个路径', 'blue'],
+    ['已删除存档', rc.deleted, '已移入回收站 '+(pr.moved||0)+' 个', (rc.deleted?'warn':'')],
+    ['回收站占用', rc.size_text, '可见副本 '+(rc.bin_files||0)+' 个 / '+(rc.bin_size_text||'-'), ''],
+    ['删除接管', pr.moved||0, '删除 '+(pr.deletes||0)+' 次 / 还原 '+(pr.restored||0)+' 次','ok']
+  ];
+  $('#statCards').innerHTML = cards.map(c=>
+    `<div class="stat ${c[3]||''}"><div class="k">${esc(c[0])}</div>
+      <div class="v">${esc(c[1])}</div><div class="s">${esc(c[2]||'')}</div></div>`).join('');
+
+  const au = s.audit || {};
+  const DEL_ACTION = {move_to_bin:'文件被删除时搬进回收站目录（删除照常生效，数据可恢复）',
+    restore:'文件被删除时立即还原回原路径（客户端表现为「删不掉」）',
+    record:'只记录删除并保留回收站内容库，不生成实体副本'};
+  const rows = [
+    ['服务地址', s.web_url],
+    ['运行时长', s.uptime? Math.floor(s.uptime/60)+' 分 '+ (s.uptime%60) +' 秒' : '-'],
+    ['管理员权限', s.admin? '是':'否（审计与删除保护需要管理员权限）'],
+    ['删除动作', (s.delete_action||'') + ' —— ' + (DEL_ACTION[s.delete_action]||'')],
+    ['审计状态', au.enabled === false
+        ? '已关闭（audit.enabled = false，不采集客户端访问记录）'
+        : (au.running ? ('运行中，已采集 ' + (au.collected||0) + ' 条安全事件')
+                      : (au.available ? '未运行' : '不可用：' + (au.reason||'')))],
+    ['客户端 IP 归因', s.running
+        ? ('5145 共享审计事件自带 IP；事件缺 IP 时按账号反查 SMB 会话表'
+           + (au.sessions ? ('（当前会话 '+(au.sessions.sessions||0)+' 条'
+              + ((au.sessions.ips||[]).length? '，客户端 '+(au.sessions.ips||[]).join('/') : '')
+              + '）') : ''))
+        : '待服务启动后生效'],
+    ['审计策略', au.enabled === false ? '—' : (au.configure_msg || (au.available ? '待配置' : '—'))],
+    ['读取记录', (function(){
+        const r = au.read_log || {};
+        if (au.enabled === false) return '审计已关闭，读取记录不可用';
+        let t = '来源：' + (r.source || '5145 共享审计');
+        if (r.dedup_seconds) t += `　·　同一次访问 ${r.dedup_seconds}s 内合并为一条`;
+        if (r.skip_loopback) t += '　·　已忽略本机回环访问';
+        if ((r.read_extensions||[]).length)
+          t += '　·　4663 只记：' + r.read_extensions.join('/');
+        return t;
+      })()],
+    ['日志目录', s.log_dir],
+    ['访问日志', logLine(lg.access, 'access_yyyymmdd.log')],
+    ['删除日志', logLine(lg.delete, 'delete_yyyymmdd.log')],
+    ['回收站目录', s.recycle_path],
+    ['自动清理', purgeLine(pg)],
+    ['可见回收站', (s.bin_path||'') + '（被删除文件的实体副本，可直接翻找）']
+  ];
+  $('#runInfo').innerHTML = rows.map(r=>
+    `<div class="k">${esc(r[0])}</div><div class="v">${esc(r[1])}</div>`).join('');
+
+  const v = s.config_ok || {};
+  const al = [];
+  (v.errors||[]).forEach(e=>al.push(`<div class="alert err">配置错误：${esc(e)}</div>`));
+  (v.warnings||[]).forEach(w=>al.push(`<div class="alert warn">${esc(w)}</div>`));
+  if (s.running && au.enabled !== false && au.available === false)
+    al.push(`<div class="alert warn">审计组件不可用：${esc(au.reason||'')}；当前只记录文件系统变更，无法追溯到具体客户端账号。</div>`);
+  $('#cfgAlert').innerHTML = al.join('');
+}
+
+async function loadEvents(){
+  try{
+    const j = await api('/api/events?limit=40');
+    const items = j.data || [];
+    if (!items.length){ $('#evList').innerHTML = '<div class="empty">暂无事件</div>'; return; }
+    $('#evList').innerHTML = items.map(e=>{
+      if (e.kind){
+        const p = e.payload || {};
+        const txt = e.kind==='delete'
+          ? ('删除 ' + (p.path||'')
+             + (p.action==='move_to_bin' && p.bin_path ? ' → 已移入回收站'
+                : (p.restored? ' → 已自动还原':'')))
+          : (e.kind + ' ' + JSON.stringify(p).slice(0,160));
+        const lv = e.kind==='delete' ? 'warn' : '';
+        return `<div class="ev ${lv}"><span class="tm">${esc(e.ts||'')}</span><span class="tx">${esc(txt)}</span></div>`;
+      }
+      return `<div class="ev ${esc(e.level||'')}"><span class="tm">${esc(e.ts||'')}</span><span class="tx">${esc(e.text||'')}</span></div>`;
+    }).join('');
+  }catch(e){}
+}
+
+/* ============ 服务启停 ============ */
+$('#btnToggle').onclick = async ()=>{
+  const running = lastStatus && lastStatus.running;
+  const btn = $('#btnToggle');
+  btn.disabled = true;
+  try{
+    if (running){
+      await api('/api/service/stop',{method:'POST'});
+      toast('服务已停止');
+    } else {
+      const j = await api('/api/service/start',{method:'POST'});
+      toast(j.data && j.data.ok ? '服务已启动' : (j.data && j.data.message) || '启动失败',
+            j.data && j.data.ok ? 'ok':'err');
+    }
+  }catch(e){ toast(e.message,'err'); }
+  finally{ btn.disabled=false; await loadStatus(); await loadEvents(); }
+};
+
+/* ============ 访问日志 ============ */
+function pagerHtml(prefix, res, fn){
+  const page = res.page||1;
+  const has = res.has_more;
+  return `<button ${page<=1?'disabled':''} onclick="${fn}(${page-1})">上一页</button>
+    <span class="hint">第 ${page} 页</span>
+    <button ${has?'':'disabled'} onclick="${fn}(${page+1})">下一页</button>`;
+}
+function resetAccess(){ ['aQ','aUser'].forEach(i=>$('#'+i).value=''); $('#aOp').value=''; loadAccess(1); }
+async function loadAccess(page){
+  curPageNo.access = page;
+  const errHtml = e => `<div class="empty">读取失败：${esc(e.message)}</div>`;
+  try{
+    const q = new URLSearchParams({page:page, size:50, q:$('#aQ').value.trim(),
+      user:$('#aUser').value.trim(), op:$('#aOp').value});
+    const j = await api('/api/logs/access?'+q);
+    const res = j.data;
+    const items = res.items||[];
+    $('#aInfo').textContent = `本次返回 ${items.length} 条 · 已扫描 ${res.scanned} 行 · 日志文件 ${(res.log||{}).size_text||'-'}` +
+      (res.truncated? ' · 已到扫描上限，请缩小时间范围':'');
+    $('#aPager').innerHTML = pagerHtml('a', res, 'loadAccess');
+    if (!items.length){ $('#aTable').innerHTML='<div class="empty">暂无记录</div>'; return; }
+    $('#aTable').innerHTML = `<table><thead><tr>
+      <th style="width:150px">时间</th><th style="width:76px">操作</th>
+      <th style="width:170px">用户</th><th style="width:128px">客户端 IP</th>
+      <th>文件路径</th><th style="width:92px">大小</th>
+      <th style="width:88px">来源</th></tr></thead><tbody>` +
+      items.map(r=>`<tr>
+        <td class="mono">${fmtTime(r.ts)}</td>
+        <td>${opPill(r.op)}</td>
+        <td>${actorCell(r)}</td>
+        <td>${ipCell(r)}</td>
+        <td class="path">${esc(r.path)}</td>
+        <td>${esc(r.size_text||'')}</td>
+        <td class="hint">${esc(srcText(r.source))}</td></tr>`).join('') +
+      '</tbody></table>';
+  }catch(e){ $('#aTable').innerHTML = errHtml(e); }
+}
+
+/* ============ 删除日志 ============ */
+function resetDelete(){ ['dQ','dUser'].forEach(i=>$('#'+i).value=''); loadDelete(1); }
+async function loadDelete(page){
+  curPageNo.del = page;
+  try{
+    const q = new URLSearchParams({page:page, size:50, q:$('#dQ').value.trim(), user:$('#dUser').value.trim()});
+    const j = await api('/api/logs/delete?'+q);
+    const res = j.data, items = res.items||[];
+    $('#dInfo').textContent = `本次返回 ${items.length} 条 · 已扫描 ${res.scanned} 行` +
+      (res.truncated?' · 已到扫描上限，请缩小时间范围':'');
+    $('#dPager').innerHTML = pagerHtml('d', res, 'loadDelete');
+    if (!items.length){ $('#dTable').innerHTML='<div class="empty">暂无删除记录</div>'; return; }
+    $('#dTable').innerHTML = `<table><thead><tr>
+      <th style="width:150px">时间</th><th style="width:70px">类型</th>
+      <th style="width:160px">操作者</th><th style="width:122px">客户端 IP</th>
+      <th>文件路径</th><th style="width:86px">大小</th>
+      <th style="width:112px">状态</th><th style="width:88px">操作</th></tr></thead><tbody>` +
+      items.map(r=>{
+        let st;
+        if (r.audit_only) st = '<span class="pill gray">审计记录</span>';
+        else if (r.restored) st = '<span class="pill ok">已还原</span>';
+        else if (r.action==='move_to_bin') st = '<span class="pill write">已入回收站</span>';
+        else if (r.recoverable) st = '<span class="pill write">待恢复</span>';
+        else st = '<span class="pill del">不可恢复</span>';
+        const btn = (r.version_id && r.recoverable && !r.audit_only)
+          ? `<button onclick="restoreId(${r.version_id})">恢复</button>` : '—';
+        const binHint = (r.bin_path && r.action==='move_to_bin')
+          ? `<br><span class="hint" title="${esc(r.bin_path)}">回收站副本：${esc(r.bin_path)}</span>`
+          : '';
+        return `<tr>
+          <td class="mono">${fmtTime(r.ts)}</td>
+          <td>${opPill(r.op)}</td>
+          <td>${actorCell(r)}</td>
+          <td>${ipCell(r)}</td>
+          <td class="path">${esc(r.path)}${r.is_dir?`<br><span class="hint">目录，涉及 ${r.item_count||0} 个文件${r.moved_count?`，已移入回收站 ${r.moved_count} 个`:''}${r.restored_count?`，已还原 ${r.restored_count} 个`:''}</span>`:''}${binHint}</td>
+          <td>${esc(r.size_text||'')}</td>
+          <td>${st}${r.restore_error?`<br><span class="hint">${esc(r.restore_error)}</span>`:
+              (r.restored&&r.restore_path&&r.restore_path!==r.path?`<br><span class="hint">→ ${esc(r.restore_path)}</span>`:'')}</td>
+          <td>${btn}</td></tr>`;
+      }).join('') + '</tbody></table>';
+  }catch(e){ $('#dTable').innerHTML = `<div class="empty">读取失败：${esc(e.message)}</div>`; }
+}
+
+/* ============ 回收站 ============ */
+async function loadBin(page){
+  curPageNo.bin = page;
+  try{
+    const a = new URLSearchParams({page:page, size:50, state:$('#rState').value, path:$('#rPath').value.trim()});
+    const j = await api('/api/recycle?'+a);
+    const res = j.data, items = res.items||[];
+    const st = res.stats||{};
+    $('#binStats').innerHTML = [
+      ['已删除存档', st.deleted, '可在 Web 一键恢复', st.deleted?'warn':''],
+      ['全部版本', st.versions, '覆盖 '+(st.paths||0)+' 个路径','blue'],
+      ['可见回收站副本', st.bin_files, st.bin_path||'','blue'],
+      ['占用空间', st.size_text, '上限 '+(st.max_size_gb||0)+' GB / 保留 '+(st.retention_days||0)+' 天','']
+    ].map(c=>`<div class="stat ${c[3]||''}"><div class="k">${esc(c[0])}</div>
+      <div class="v">${esc(c[1])}</div><div class="s">${esc(c[2]||'')}</div></div>`).join('');
+    $('#rInfo').textContent = `共 ${res.total} 条 · 第 ${res.page}/${res.pages} 页 · 目录 ${st.path||''}`;
+    $('#rPager').innerHTML = `<button ${res.page<=1?'disabled':''} onclick="loadBin(${res.page-1})">上一页</button>
+      <span class="hint">${res.page}/${res.pages}</span>
+      <button ${res.page>=res.pages?'disabled':''} onclick="loadBin(${res.page+1})">下一页</button>`;
+    const keepSel = new Set(selectedIds());   // 自动刷新时保住用户已勾选的记录
+    if (!items.length){ $('#rTable').innerHTML='<div class="empty">回收站为空</div>'; return; }
+    $('#rTable').innerHTML = `<table><thead><tr>
+      <th style="width:34px"><input type="checkbox" class="chk" onchange="toggleAll(this)"></th>
+      <th style="width:140px">删除时间</th>
+      <th>原路径</th><th style="width:80px">大小</th>
+      <th style="width:120px">操作者</th><th style="width:118px">客户端 IP</th>
+      <th style="width:96px">状态</th>
+      <th style="width:150px">操作</th></tr></thead><tbody>` +
+      items.map(r=>{
+        const state = r.restored_at ? '<span class="pill ok">已还原</span>'
+          : (r.in_bin ? '<span class="pill del">已删除</span>' : '<span class="pill gray">存档</span>');
+        const tm = r.deleted_at || r.stored_at;
+        const canRestore = r.in_bin && r.recoverable;
+        const btn = canRestore
+          ? `<button onclick="restoreId(${r.id})">一键恢复</button>`
+          : (r.in_bin
+              ? `<button disabled title="内容已不在回收站内容库，无法恢复">无法恢复</button>`
+              : '—');
+        return `<tr>
+          <td><input type="checkbox" class="chk rowchk" value="${r.id}" ${canRestore?'':'disabled'}></td>
+          <td class="mono">${esc(new Date(tm*1000).toLocaleString('zh-CN',{hour12:false}))}</td>
+          <td class="path">${esc(r.orig_path)}
+            ${r.bin_path?`<br><span class="hint" title="${esc(r.bin_path)}">回收站副本：${esc(r.bin_path)}</span>`:''}
+            ${r.restore_target?`<br><span class="hint">已还原到 ${esc(r.restore_target)}</span>`:''}</td>
+          <td>${esc(fmtSize(r.size))}</td>
+          <td>${esc(r.deleted_by||r.actor||'—')}</td>
+          <td>${ipCell({ip: r.deleted_ip||r.actor_ip})}</td>
+          <td>${state}</td>
+          <td>${btn}
+              <button class="danger" onclick="delVersion(${r.id})">彻底删除</button></td></tr>`;
+      }).join('') + '</tbody></table>';
+    if (keepSel.size)
+      document.querySelectorAll('#rTable .rowchk').forEach(
+        c=>{ if (keepSel.has(c.value)) c.checked = true; });
+  }catch(e){ $('#rTable').innerHTML = `<div class="empty">读取失败：${esc(e.message)}</div>`; }
+}
+function fmtSize(n){
+  n = Number(n)||0; const u=['B','KB','MB','GB','TB']; let i=0;
+  while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+  return (i===0? n.toFixed(0) : n.toFixed(1)) + ' ' + u[i];
+}
+function toggleAll(el){ document.querySelectorAll('.rowchk').forEach(c=>c.checked=el.checked); }
+function selectedIds(){ return Array.from(document.querySelectorAll('.rowchk:checked')).map(c=>Number(c.value)); }
+
+async function restoreId(id){
+  try{
+    const j = await api('/api/recycle/restore',{method:'POST', body:JSON.stringify({ids:[id]})});
+    const d = j.data;
+    if (d.failed) toast(d.errors[0] && d.errors[0].error || '恢复失败','err');
+    else toast('已恢复到 '+d.items[0].path, 'ok');
+    loadBin(1); loadEvents();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function restoreSelected(){
+  const ids = selectedIds();
+  if (!ids.length) return toast('请先勾选要恢复的记录','warn');
+  confirmDo('一键恢复', `将恢复 ${ids.length} 个文件到原路径（若已存在则按配置改名/覆盖），确认继续？`, async ()=>{
+    try{
+      const j = await api('/api/recycle/restore',{method:'POST', body:JSON.stringify({ids})});
+      toast(`恢复成功 ${j.data.ok} 个，失败 ${j.data.failed} 个`, j.data.failed?'warn':'ok');
+      loadBin(1); loadEvents();
+    }catch(e){ toast(e.message,'err'); }
+  }, '确认恢复');
+}
+async function delVersion(id){
+  confirmDo('彻底删除','该版本将从回收站永久移除，之后无法再恢复，确认？', async ()=>{
+    try{
+      await api('/api/recycle/delete',{method:'POST', body:JSON.stringify({ids:[id]})});
+      toast('已彻底删除'); loadBin(1);
+    }catch(e){ toast(e.message,'err'); }
+  }, '永久删除');
+}
+async function deleteSelected(){
+  const ids = selectedIds();
+  if (!ids.length) return toast('请先勾选记录','warn');
+  confirmDo('彻底删除', `将永久删除 ${ids.length} 个版本，无法恢复，确认？`, async ()=>{
+    try{
+      const j = await api('/api/recycle/delete',{method:'POST', body:JSON.stringify({ids})});
+      toast('已删除 '+j.data.removed+' 个'); loadBin(1);
+    }catch(e){ toast(e.message,'err'); }
+  }, '永久删除');
+}
+function emptyBin(){
+  confirmDo('清空回收站','将永久删除回收站中的全部版本，且无法恢复。确认清空？', async ()=>{
+    try{
+      const j = await api('/api/recycle/empty',{method:'POST'});
+      toast('已清空，移除 '+j.data.removed+' 个版本','warn'); loadBin(1);
+    }catch(e){ toast(e.message,'err'); }
+  }, '清空回收站');
+}
+async function purgeBin(){
+  try{
+    const j = await api('/api/recycle/purge',{method:'POST'});
+    const d = j.data;
+    toast('清理完成：过期 '+d.expired.removed+' 个，超容 '+d.size_limit.removed+' 个','ok');
+    loadBin(1);
+    loadStatus();              // 概览里的「自动清理（下次执行时间）」同步刷新
+  }catch(e){ toast(e.message,'err'); }
+}
+
+/* ============ 导出 ============ */
+function exportCsv(type){
+  const params = type==='access'
+    ? new URLSearchParams({type:'access', q:$('#aQ').value, user:$('#aUser').value, op:$('#aOp').value})
+    : new URLSearchParams({type:'delete', q:$('#dQ').value, user:$('#dUser').value});
+  window.open('/api/logs/export?'+params, '_blank');
+}
+
+/* ============ 配置 ============ */
+async function loadConfig(){
+  try{
+    const j = await api('/api/config/raw');
+    $('#confText').value = j.data.text;
+    $('#confPath').textContent = j.data.path;
+    renderConfMsg(j.data.validate);
+  }catch(e){ toast(e.message,'err'); }
+}
+function renderConfMsg(v){
+  if (!v) return;
+  const a = [];
+  (v.errors||[]).forEach(x=>a.push(`<div class="alert err">配置错误：${esc(x)}</div>`));
+  (v.warnings||[]).forEach(x=>a.push(`<div class="alert warn">${esc(x)}</div>`));
+  if (!a.length) a.push('<div class="alert ok">配置校验通过</div>');
+  $('#confMsg').innerHTML = a.join('');
+}
+function resetConfig(){
+  // 从服务端重新拉取：等价于丢弃本地未保存的改动并恢复带注释的排版
+  loadConfig().then(()=>toast('已恢复默认注释排版','ok'));
+}
+async function saveConfig(){
+  const text = $('#confText').value;
+  if (!text.trim()) return toast('配置内容为空','err');
+  try{
+    const j = await api('/api/config/raw',{method:'POST', body:JSON.stringify({text})});
+    if (j.data.text) $('#confText').value = j.data.text;   // 回填带注释的规范化版本
+    renderConfMsg(j.data.validate);
+    toast('配置已保存' + (j.data.need_restart? '，端口已变更，请重启服务':''),'ok');
+    loadStatus();
+  }catch(e){
+    $('#confMsg').innerHTML = `<div class="alert err">保存失败：${esc(e.message)}</div>`;
+    toast('保存失败：'+e.message,'err');
+  }
+}
+
+/* ============ 轮询（每 5 秒自动刷新当前页面） ============ */
+const AUTO_MS = 5000;
+let autoOn = localStorage.getItem('fg_auto') !== '0';
+let lastRefAt = '';
+let curPageNo = {access:1, del:1, bin:1};   // 记住每页停留在第几页，自动刷新不跳回第 1 页
+
+function setAuto(on){
+  autoOn = !!on;
+  localStorage.setItem('fg_auto', autoOn ? '1' : '0');
+  const cb = $('#autoRef'); if (cb) cb.checked = autoOn;
+  const lb = $('#autoLabel').parentNode; if (lb) lb.classList.toggle('off', !autoOn);
+  if (autoOn) refreshTick();
+}
+function markRefreshed(){
+  lastRefAt = new Date().toLocaleTimeString('zh-CN', {hour12:false});
+  const el = $('#lastRef'); if (el) el.textContent = '上次刷新 ' + lastRefAt;
+}
+async function refreshAll(){
+  await loadStatus();
+  await loadEvents();
+  if (curPage==='access') await loadAccess(curPageNo.access);
+  else if (curPage==='del') await loadDelete(curPageNo.del);
+  else if (curPage==='bin') await loadBin(curPageNo.bin);
+  else if (curPage==='conf') await loadConfig();
+  markRefreshed();
+}
+/* 自动刷新：只刷新「数据」，不动用户正在输入的筛选框与配置编辑器 */
+async function refreshTick(){
+  if (!autoOn || document.hidden || needLogin) return;
+  const mask = $('#confirmMask');
+  if (mask && mask.classList.contains('on')) return;    // 用户正在确认操作，先别刷
+  try{
+    await loadStatus();
+    if (curPage==='dash' || curPage==='conf') await loadEvents();
+    else if (curPage==='access') await loadAccess(curPageNo.access);
+    else if (curPage==='del') await loadDelete(curPageNo.del);
+    else if (curPage==='bin') await loadBin(curPageNo.bin);
+    markRefreshed();
+  }catch(e){ /* 自动刷新失败保持静默，避免反复弹提示 */ }
+}
+let timer = null;
+async function boot(){
+  try{
+    const r = await fetch('/api/ping');
+    const j = await r.json();
+    const p = j.data || {};
+    $('#sideVer').textContent = 'v' + (p.version||'1.0.0');
+    if (!p.need_login) $('#sideOut').style.display = 'none';
+    if (p.need_login && !p.auth){ showLogin(); return; }
+  }catch(e){}
+  const hash = (location.hash || '').slice(1);
+  go(TITLES[hash] ? hash : 'dash', true);
+  setAuto(autoOn);
+  refreshAll();
+  timer = setInterval(refreshTick, AUTO_MS);
+  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) refreshTick(); });
+}
+boot();
+</script>
+</body>
+</html>
